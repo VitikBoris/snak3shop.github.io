@@ -87,7 +87,7 @@
       category.items.forEach(item => {
         const div = document.createElement('div');
         div.className = 'item';
-        div.textContent = ${item.name} — ${item.price}₽;
+        div.textContent = `${item.name} — ${item.price}₽`;
         div.onclick = () => showItemDetail(item);
         container.appendChild(div);
       });
@@ -206,4 +206,5 @@ showCategories(currentGame);
   </script>
 
 </body>
+
 </html>
