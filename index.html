@@ -1,0 +1,209 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mini Shop</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 10px; }
+    button { margin: 5px 0; padding: 10px; width: 100%; font-size: 16px; }
+    .hidden { display: none; }
+    .category, .item, .cart-item { border-bottom: 1px solid #ddd; padding: 8px 0; cursor: pointer; }
+    .cart-item { display: flex; justify-content: space-between; }
+    .back { cursor: pointer; color: blue; margin-bottom: 10px; display: inline-block; }
+  </style>
+</head>
+<body>
+
+  <div id="games"></div>
+  <div id="categories" class="hidden"></div>
+  <div id="items" class="hidden"></div>
+  <div id="item-detail" class="hidden"></div>
+  <div id="cart" class="hidden"></div>
+
+  <script>
+    const apiUrl = "http://localhost:8000"; // Поменяй на адрес своего backend
+    let catalog = null;
+    let cart = [];
+    let currentGame = null;
+    let currentCategory = null;
+
+    function show(element) {
+      element.classList.remove('hidden');
+    }
+    function hide(element) {
+      element.classList.add('hidden');
+    }
+    function hideAll() {
+      ['games', 'categories', 'items', 'item-detail', 'cart'].forEach(id => {
+        hide(document.getElementById(id));
+      });
+    }
+
+    async function loadCatalog() {
+      const res = await fetch(apiUrl + "/catalog");
+      catalog = await res.json();
+      showGames();
+    }
+
+    function showGames() {
+      hideAll();
+      const container = document.getElementById('games');
+      container.innerHTML = "<h2>Выберите игру</h2>";
+      catalog.games.forEach(game => {
+        const btn = document.createElement('button');
+        btn.textContent = game.name;
+        btn.onclick = () => {
+          currentGame = game;
+          showCategories(game);
+        };
+        container.appendChild(btn);
+      });
+      show(container);
+    }
+
+    function showCategories(game) {
+      hideAll();
+      const container = document.getElementById('categories');
+      container.innerHTML = '<span class="back" onclick="showGames()">⬅ Назад</span><h2>${game.name} — категории</h2>';
+      game.categories.forEach(cat => {
+        const div = document.createElement('div');
+        div.className = 'category';
+        div.textContent = cat.name;
+        div.onclick = () => {
+          currentCategory = cat;
+          showItems(cat);
+        };
+        container.appendChild(div);
+      });
+      show(container);
+    }
+
+    function showItems(category) {
+      hideAll();
+      const container = document.getElementById('items');
+      container.innerHTML = '<span class="back" onclick="showCategories(currentGame)">⬅ Назад</span><h2>${category.name}</h2>';
+      category.items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.textContent = ${item.name} — ${item.price}₽;
+        div.onclick = () => showItemDetail(item);
+        container.appendChild(div);
+      });
+      show(container);
+    }
+
+    function showItemDetail(item) {
+      hideAll();
+      const container = document.getElementById('item-detail');
+      container.innerHTML = `
+        <span class="back" onclick="showItems(currentCategory)">⬅ Назад</span>
+        <h2>${item.name}</h2>
+        <p>Цена: ${item.price}₽</p>
+        <label>Количество: <input type="number" id="qty" value="1" min="1" /></label><br/><br/>
+        <button onclick="addToCart('${item.name}', ${item.price})">Добавить в корзину</button>
+      `;
+      show(container);
+    }
+
+    function addToCart(name, price) {
+      const qty = parseInt(document.getElementById('qty').value);
+      if (qty < 1) {
+        alert("Количество должно быть не меньше 1");
+        return;
+      }
+      const existing = cart.find(i => i.name === name);
+      if (existing) {
+        existing.quantity += qty;
+      } else {
+        cart.push({ name, price, quantity: qty, game_id: currentGame.id, category_name: currentCategory.name });
+      }
+      alert(`${qty} x ${name} добавлено в корзину`);
+
+showCategories(currentGame);
+    }
+
+    function showCart() {
+      hideAll();
+      const container = document.getElementById('cart');
+      container.innerHTML = '<span class="back" onclick="showGames()">⬅ Назад</span><h2>Корзина</h2>';
+      if (cart.length === 0) {
+        container.innerHTML += "<p>Корзина пуста</p>";
+        show(container);
+        return;
+      }
+      let total = 0;
+      cart.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'cart-item';
+        div.textContent = '${item.quantity} x ${item.name} — ${item.price * item.quantity}₽';
+        total += item.price * item.quantity;
+        container.appendChild(div);
+      });
+      container.innerHTML += <h3>Итого: ${total}₽</h3>;
+      container.innerHTML += <button onclick="sendOrder()">Оформить заказ</button>;
+      show(container);
+    }
+
+    async function sendOrder() {
+      if (cart.length === 0) {
+        alert("Корзина пуста");
+        return;
+      }
+
+      const userId = prompt("Введите ваш Telegram ID");
+      if (!userId) {
+        alert("Telegram ID обязателен");
+        return;
+      }
+      const username = prompt("Введите ваш Telegram username (без @)");
+      if (!username) {
+        alert("Username обязателен");
+        return;
+      }
+
+      const order = {
+        user_id: parseInt(userId),
+        username: username,
+        items: cart.map(i => ({
+          game_id: i.game_id,
+          category_name: i.category_name,
+          item_name: i.name,
+          price: i.price,
+          quantity: i.quantity
+        })),
+        total: cart.reduce((sum, i) => sum + i.price * i.quantity, 0)
+      };
+
+      try {
+        const res = await fetch(apiUrl + "/order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(order)
+        });
+        const data = await res.json();
+        if (data.status === "ok") {
+          alert("Заказ отправлен! Администратор свяжется с вами.");
+          cart = [];
+          showGames();
+        } else {
+          alert("Ошибка при отправке заказа.");
+        }
+      } catch (e) {
+        alert("Ошибка соединения с сервером.");
+      }
+    }
+
+    // Инициализация
+    loadCatalog();
+
+    // Добавим кнопку "Корзина" везде сверху
+    const cartBtn = document.createElement("button");
+    cartBtn.textContent = "Корзина 🛒";
+    cartBtn.onclick = showCart;
+    document.body.insertBefore(cartBtn, document.body.firstChild);
+  </script>
+
+</body>
+</html>
