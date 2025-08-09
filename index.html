@@ -137,12 +137,12 @@ showCategories(currentGame);
       cart.forEach(item => {
         const div = document.createElement('div');
         div.className = 'cart-item';
-        div.textContent = '${item.quantity} x ${item.name} — ${item.price * item.quantity}₽';
+        div.textContent = `${item.quantity} x ${item.name} — ${item.price * item.quantity}₽`;
         total += item.price * item.quantity;
         container.appendChild(div);
       });
-      container.innerHTML += <h3>Итого: ${total}₽</h3>;
-      container.innerHTML += <button onclick="sendOrder()">Оформить заказ</button>;
+      container.innerHTML += `<h3>Итого: ${total}₽</h3>`;
+      container.innerHTML += `<button onclick="sendOrder()">Оформить заказ</button>`;
       show(container);
     }
 
