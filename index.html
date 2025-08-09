@@ -66,7 +66,7 @@
     function showCategories(game) {
       hideAll();
       const container = document.getElementById('categories');
-      container.innerHTML = '<span class="back" onclick="showGames()">⬅ Назад</span><h2>${game.name} — категории</h2>';
+      container.innerHTML = `<span class="back" onclick="showGames()">⬅ Назад</span><h2>${game.name} — категории</h2>`;
       game.categories.forEach(cat => {
         const div = document.createElement('div');
         div.className = 'category';
@@ -83,7 +83,7 @@
     function showItems(category) {
       hideAll();
       const container = document.getElementById('items');
-      container.innerHTML = '<span class="back" onclick="showCategories(currentGame)">⬅ Назад</span><h2>${category.name}</h2>';
+      container.innerHTML = `<span class="back" onclick="showCategories(currentGame)">⬅ Назад</span><h2>${category.name}</h2>`;
       category.items.forEach(item => {
         const div = document.createElement('div');
         div.className = 'item';
